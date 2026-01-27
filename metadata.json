@@ -1,0 +1,5 @@
+{
+  "name": "TrustBank Secure Dashboard",
+  "description": "Production-ready digital banking platform featuring biometric security, real-time transfers, and responsive PWA architecture.",
+  "requestFramePermissions": []
+}

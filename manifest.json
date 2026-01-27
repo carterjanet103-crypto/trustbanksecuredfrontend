@@ -1,0 +1,21 @@
+{
+  "name": "TrustBank Secure Dashboard",
+  "short_name": "TrustBank",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0ea5e9",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2830/2830284.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2830/2830284.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
