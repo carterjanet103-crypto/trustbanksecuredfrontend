@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { useTrust } from './TrustContext';
 import { ViewState, ViewType } from './types';
+
+// Components
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
@@ -9,6 +11,7 @@ import Home from './components/Home';
 const App: React.FC = () => {
   const { user, transactions } = useTrust();
   
+  // Instant Session Check to prevent the "Pause" error
   const [viewState, setViewState] = useState<ViewState>(() => {
     const isAuth = sessionStorage.getItem('trustbank_session') === 'active';
     return isAuth ? { view: 'DASHBOARD' } : { view: 'HOME' };
@@ -24,21 +27,25 @@ const App: React.FC = () => {
     setViewState({ view: 'HOME' });
   }, []);
 
+  // --- VIEW ROUTER ---
   if (viewState.view === 'HOME') return <Home onStart={() => setViewState({ view: 'LOGIN' })} />;
   if (viewState.view === 'LOGIN') return <Login onLogin={handleLogin} />;
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900">
-      <Sidebar 
-        user={user} 
-        onNavigate={(v: ViewType) => setViewState({ view: v })} 
-        onLogout={handleLogout} 
-      />
-      <main className="flex-1 p-8">
-        {viewState.view === 'DASHBOARD' && (
-          <Dashboard user={user} transactions={transactions} />
-        )}
-      </main>
+    <div className="min-h-screen bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-200 transition-colors duration-300 selection:bg-brand-600 selection:text-white">
+      <div className="flex">
+        <Sidebar 
+          user={user} 
+          onNavigate={(v: ViewType) => setViewState({ view: v })} 
+          onLogout={handleLogout} 
+        />
+        <main className="flex-1 p-4 lg:p-8">
+          {viewState.view === 'DASHBOARD' && (
+            <Dashboard user={user} transactions={transactions} />
+          )}
+          {/* Add other views here */}
+        </main>
+      </div>
     </div>
   );
 };
