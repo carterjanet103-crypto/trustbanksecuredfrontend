@@ -1,19 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import Login from './components/Login';
-import Dashboard from './components/Dashboard';
-import Receipt from './components/Receipt';
-import Sidebar from './components/Sidebar';
-import Cards from './components/Cards';
-import Statements from './components/Statements';
-import Settings from './components/Settings';
-import Home from './components/Home';
-import Transfers from './components/Transfers';
-import Support from './components/Support';
-import Tools from './components/Tools';
-import ReceiptsIndex from './components/ReceiptsIndex';
-import PaymentRequired from './components/PaymentRequired';
-import { ViewState, ViewType, Transaction, User, TransactionType, TransactionCategory } from './types';
-import { CURRENT_USER, MOCK_TRANSACTIONS } from './constants';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+// ... (imports remain the same)
 
 const App: React.FC = () => {
   const [viewState, setViewState] = useState<ViewState>({ view: 'HOME' });
@@ -23,17 +9,20 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User>(CURRENT_USER);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  
+  // Ref to handle toast timeout cleanup
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
-      return (
-        localStorage.getItem('theme') === 'dark' ||
-        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
-      );
+      const saved = localStorage.getItem('theme');
+      if (saved) return saved === 'dark';
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
     return false;
   });
 
+  // INITIAL DATA LOAD
   useEffect(() => {
     const storedSession = sessionStorage.getItem('trustbank_session');
     if (storedSession === 'active') {
@@ -45,29 +34,36 @@ const App: React.FC = () => {
       setIsLoadingData(false);
     }, 800);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
   }, []);
 
+  // THEME PERSISTENCE
   useEffect(() => {
+    const root = window.document.documentElement;
     if (isDarkMode) {
-      document.documentElement.classList.add('dark');
+      root.classList.add('dark');
       localStorage.setItem('theme', 'dark');
     } else {
-      document.documentElement.classList.remove('dark');
+      root.classList.remove('dark');
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
 
+  // VIEW NAVIGATION SCROLL
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [viewState]);
+  }, [viewState.view]);
 
-  const showNotification = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+  const showNotification = useCallback((message: string, type: 'success' | 'info' | 'error' = 'success') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
+    toastTimeoutRef.current = setTimeout(() => setToast(null), 3000);
+  }, []);
 
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+  const toggleTheme = () => setIsDarkMode(prev => !prev);
 
   const handleLogin = () => {
     sessionStorage.setItem('trustbank_session', 'active');
@@ -83,7 +79,8 @@ const App: React.FC = () => {
   };
 
   const handleNavigate = (view: ViewType) => {
-    if (view === 'RECEIPT') return;
+    // Prevent navigation to abstract view types without IDs
+    if (view === 'RECEIPT') return; 
     setViewState({ view });
     setIsMobileMenuOpen(false);
   };
@@ -107,13 +104,13 @@ const App: React.FC = () => {
   };
 
   const handlePayCharges = () => {
-    const amount = user.dueCharges;
+    const amountToPay = user.dueCharges; // Capture current due amount
 
     const newTx: Transaction = {
       id: `tx_${Date.now()}`,
       date: new Date().toISOString(),
       merchant: 'TrustBank Fees',
-      amount,
+      amount: amountToPay,
       type: TransactionType.DEBIT,
       category: TransactionCategory.FEES,
       status: 'Completed',
@@ -125,7 +122,7 @@ const App: React.FC = () => {
 
     setUser(prev => ({
       ...prev,
-      balance: prev.balance - amount,
+      balance: prev.balance - amountToPay,
       accountStatus: 'Active',
       dueCharges: 0,
     }));
@@ -139,7 +136,8 @@ const App: React.FC = () => {
     showNotification('Note updated', 'info');
   };
 
-  // ROUTING
+  // --- RENDERING LOGIC ---
+
   if (viewState.view === 'HOME') return <Home onStart={() => setViewState({ view: 'LOGIN' })} />;
   if (viewState.view === 'LOGIN') return <Login onLogin={handleLogin} />;
 
@@ -153,50 +151,51 @@ const App: React.FC = () => {
     );
   }
 
+  // Safety check for Receipt view
+  const currentTransaction = viewState.view === 'RECEIPT' 
+    ? transactions.find(t => t.id === viewState.transactionId)
+    : null;
+
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300">
-
-      {/* Toast */}
+      
+      {/* Toast Notification */}
       {toast && (
-        <div className="fixed top-6 right-6 z-[100] cursor-pointer" onClick={() => setToast(null)}>
-          <div
-            className={`px-6 py-4 rounded-2xl shadow-xl flex items-center gap-3 border text-white ${
-              toast.type === 'success'
-                ? 'bg-green-600 border-green-500'
-                : toast.type === 'info'
-                ? 'bg-brand-600 border-brand-500'
-                : 'bg-red-600 border-red-500'
-            }`}
-          >
+        <div className="fixed top-6 right-6 z-[100] cursor-pointer animate-in fade-in slide-in-from-top-4" onClick={() => setToast(null)}>
+          <div className={`px-6 py-4 rounded-2xl shadow-xl flex items-center gap-3 border text-white ${
+            toast.type === 'success' ? 'bg-green-600 border-green-500' : 
+            toast.type === 'info' ? 'bg-blue-600 border-blue-500' : 'bg-red-600 border-red-500'
+          }`}>
             <span className="font-bold text-sm">{toast.message}</span>
           </div>
         </div>
       )}
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 z-50 flex items-center justify-between px-4">
+      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 z-50 flex items-center justify-between px-4">
         <div className="font-black text-lg flex items-center gap-2">
-          <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-              <path d="M3 10h12M9 4v12" />
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
           </div>
           TrustBank
         </div>
 
-        <button
-          className="p-2 rounded-md bg-slate-200 dark:bg-slate-700"
+        <button 
+          aria-label="Toggle Menu"
+          className="p-2 rounded-md bg-slate-200 dark:bg-slate-700" 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="3" y1="6" x2="19" y2="6" />
-            <line x1="3" y1="12" x2="19" y2="12" />
-            <line x1="3" y1="18" x2="19" y2="18" />
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
           </svg>
         </button>
-      </div>
+      </header>
 
-      {/* Sidebar */}
       <Sidebar
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
@@ -207,7 +206,6 @@ const App: React.FC = () => {
         isDarkMode={isDarkMode}
       />
 
-      {/* MAIN CONTENT */}
       <main className="flex-1 mt-16 lg:mt-0 p-4 lg:p-8">
         {viewState.view === 'DASHBOARD' && (
           <Dashboard
@@ -231,12 +229,14 @@ const App: React.FC = () => {
           <ReceiptsIndex transactions={transactions} onOpen={navigateToReceipt} />
         )}
 
-        {viewState.view === 'RECEIPT' && viewState.transactionId && (
+        {viewState.view === 'RECEIPT' && currentTransaction ? (
           <Receipt
-            transaction={transactions.find(t => t.id === viewState.transactionId)!}
+            transaction={currentTransaction}
             onUpdateNote={updateTransactionNote}
             onBack={() => setViewState({ view: 'RECEIPTS' })}
           />
+        ) : viewState.view === 'RECEIPT' && (
+          <div className="p-8 text-center">Transaction not found.</div>
         )}
       </main>
     </div>
