@@ -35,7 +35,7 @@ export const TrustProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       category: TransactionCategory.FEES,
       status: 'Completed',
       location: 'System Charge',
-      note: 'Payment for outstanding charges',
+      note: 'Payment for charges',
     };
     setTransactions(prev => [newTx, ...prev]);
     setUser(prev => ({
