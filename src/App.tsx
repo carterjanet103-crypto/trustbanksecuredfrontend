@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTrust } from './TrustContext';
 import { ViewState, ViewType } from './types';
 
@@ -7,60 +7,47 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import Home from './components/Home';
-import Transfers from './components/Transfers';
-import ReceiptsIndex from './components/ReceiptsIndex';
-import Receipt from './components/Receipt';
-import PaymentRequired from './components/PaymentRequired';
 
 const App: React.FC = () => {
-  const { user, transactions, handleTransaction, handlePayCharges, updateNote } = useTrust();
-  
-  // Start in LOADING state to prevent "Session Paused" flicker
-  const [viewState, setViewState] = useState<ViewState>({ view: 'LOADING' as any });
+  const { user, transactions } = useTrust();
+
+  // ROOT STATE: Initialize instantly from storage to prevent session loops
+  const [viewState, setViewState] = useState<ViewState>(() => {
+    const isAuth = sessionStorage.getItem('trustbank_session') === 'active';
+    return isAuth ? { view: 'DASHBOARD' } : { view: 'HOME' };
+  });
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // SESSION CHECK: Runs once when app starts
+  // SESSION WATCHER: Keep the root in sync with browser storage
   useEffect(() => {
-    const authStatus = sessionStorage.getItem('trustbank_session');
-    if (authStatus === 'active') {
-      setViewState({ view: 'DASHBOARD' });
-    } else {
-      setViewState({ view: 'HOME' });
-    }
-  }, []);
+    const handleStorageChange = () => {
+      const isAuth = sessionStorage.getItem('trustbank_session') === 'active';
+      if (!isAuth && viewState.view !== 'HOME' && viewState.view !== 'LOGIN') {
+        setViewState({ view: 'HOME' });
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [viewState.view]);
 
-  const handleLogin = () => {
+  const handleLogin = useCallback(() => {
     sessionStorage.setItem('trustbank_session', 'active');
     setViewState({ view: 'DASHBOARD' });
-  };
+  }, []);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     sessionStorage.removeItem('trustbank_session');
     setViewState({ view: 'HOME' });
-  };
+    setIsMobileMenuOpen(false);
+  }, []);
 
-  const navigateToReceipt = (id: string) => {
-    setViewState({ view: 'RECEIPT', transactionId: id });
-  };
-
-  // --- ROUTING LOGIC ---
-  if (viewState.view === ('LOADING' as any)) return <div className="min-h-screen bg-slate-900" />;
-  
+  // --- ROOT RENDERING ---
   if (viewState.view === 'HOME') return <Home onStart={() => setViewState({ view: 'LOGIN' })} />;
-  
   if (viewState.view === 'LOGIN') return <Login onLogin={handleLogin} />;
-
-  if (viewState.view === 'PAYMENT_REQUIRED') {
-    return <PaymentRequired user={user} onPay={handlePayCharges} onBack={() => setViewState({ view: 'DASHBOARD' })} />;
-  }
-
-  const currentTransaction = viewState.view === 'RECEIPT' 
-    ? transactions.find(t => t.id === viewState.transactionId) 
-    : null;
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-      
       <Sidebar 
         isOpen={isMobileMenuOpen} 
         onClose={() => setIsMobileMenuOpen(false)}
@@ -75,29 +62,21 @@ const App: React.FC = () => {
             user={user} 
             transactions={transactions} 
             onNavigate={(v: ViewType) => setViewState({ view: v })} 
-            onReceipt={navigateToReceipt}
+            onReceipt={(id) => setViewState({ view: 'RECEIPT', transactionId: id })}
           />
         )}
 
-        {viewState.view === 'TRANSFERS' && (
-          <Transfers user={user} onTransaction={handleTransaction} />
-        )}
-
-        {viewState.view === 'RECEIPTS' && (
-          <ReceiptsIndex transactions={transactions} onOpen={navigateToReceipt} />
-        )}
-
-        {viewState.view === 'RECEIPT' && currentTransaction && (
-          <Receipt 
-            transaction={currentTransaction} 
-            onUpdateNote={updateNote} 
-            onBack={() => setViewState({ view: 'RECEIPTS' })} 
-          />
-        )}
-        
-        {/* Fallback if view not found */}
-        {['CARDS', 'STATEMENTS', 'SETTINGS', 'SUPPORT', 'TOOLS'].includes(viewState.view) && (
-          <div className="p-10 text-center opacity-50">View "{viewState.view}" coming soon.</div>
+        {/* This catches any pages not yet explicitly handled */}
+        {!['DASHBOARD', 'HOME', 'LOGIN'].includes(viewState.view) && (
+          <div className="flex flex-col items-center justify-center h-full">
+            <h2 className="text-xl font-bold">View "{viewState.view}" Ready</h2>
+            <button 
+              onClick={() => setViewState({ view: 'DASHBOARD' })}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+            >
+              Back to Dashboard
+            </button>
+          </div>
         )}
       </main>
     </div>
