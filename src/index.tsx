@@ -1,16 +1,19 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import App from './App';
 import { TrustProvider } from './TrustContext';
-import './index.css'; // Ensure this file exists for Tailwind
 
-const rootElement = document.getElementById('root');
-if (!rootElement) throw new Error('Root element not found');
+const container = document.getElementById('root');
 
-ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    <TrustProvider>
-      <App />
-    </TrustProvider>
-  </React.StrictMode>
-);
+if (!container) {
+  console.error("Critical Error: The #root element was not found in index.html");
+} else {
+  const root = createRoot(container);
+  root.render(
+    <React.StrictMode>
+      <TrustProvider>
+        <App />
+      </TrustProvider>
+    </React.StrictMode>
+  );
+}
