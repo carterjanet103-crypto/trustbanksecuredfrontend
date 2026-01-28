@@ -1,101 +1,242 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { useTrust } from './TrustContext';
-import { ViewState, ViewType } from './types';
-
-// Component Imports
-import Sidebar from './components/Sidebar';
-import Dashboard from './components/Dashboard';
+import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
+import Dashboard from './components/Dashboard';
+import Receipt from './components/Receipt';
+import Sidebar from './components/Sidebar';
+import Cards from './components/Cards';
+import Statements from './components/Statements';
+import Settings from './components/Settings';
 import Home from './components/Home';
 import Transfers from './components/Transfers';
+import Support from './components/Support';
+import Tools from './components/Tools';
+import ReceiptsIndex from './components/ReceiptsIndex';
+import PaymentRequired from './components/PaymentRequired';
+import { ViewState, ViewType, Transaction, User, TransactionType, TransactionCategory } from './types';
+import { CURRENT_USER, MOCK_TRANSACTIONS } from './constants';
 
 const App: React.FC = () => {
-  const { user, transactions } = useTrust();
-  
-  // ROOT STATE: Handles which screen is currently "mounted"
-  const [viewState, setViewState] = useState<ViewState>(() => {
-    const isAuth = sessionStorage.getItem('trustbank_session') === 'active';
-    return isAuth ? { view: 'DASHBOARD' } : { view: 'HOME' };
+  const [viewState, setViewState] = useState<ViewState>({ view: 'HOME' });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
+
+  const [user, setUser] = useState<User>(CURRENT_USER);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return (
+        localStorage.getItem('theme') === 'dark' ||
+        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      );
+    }
+    return false;
   });
 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  // THEME SYNC: Ensures the app stays in the mode selected at Login
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    const storedSession = sessionStorage.getItem('trustbank_session');
+    if (storedSession === 'active') {
+      setViewState({ view: 'DASHBOARD' });
+    }
+
+    const timer = setTimeout(() => {
+      setTransactions(MOCK_TRANSACTIONS);
+      setIsLoadingData(false);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (isDarkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
-  }, []);
+  }, [isDarkMode]);
 
-  // NAVIGATION HANDLERS
-  const handleLogin = useCallback(() => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [viewState]);
+
+  const showNotification = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+  const handleLogin = () => {
     sessionStorage.setItem('trustbank_session', 'active');
     setViewState({ view: 'DASHBOARD' });
-  }, []);
+    showNotification(`Welcome back, ${user.name.split(' ')[0]}`);
+  };
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = () => {
     sessionStorage.removeItem('trustbank_session');
     setViewState({ view: 'HOME' });
     setIsMobileMenuOpen(false);
-  }, []);
+    showNotification('Securely signed out', 'info');
+  };
 
-  // --- ROUTING LOGIC ---
+  const handleNavigate = (view: ViewType) => {
+    if (view === 'RECEIPT') return;
+    setViewState({ view });
+    setIsMobileMenuOpen(false);
+  };
+
+  const navigateToReceipt = (transactionId: string) => {
+    setViewState({ view: 'RECEIPT', transactionId });
+  };
+
+  const handleTransaction = (tx: Transaction) => {
+    setTransactions(prev => [tx, ...prev]);
+
+    setUser(prev => ({
+      ...prev,
+      balance:
+        tx.type === TransactionType.DEBIT
+          ? prev.balance - tx.amount
+          : prev.balance + tx.amount,
+    }));
+
+    showNotification('Transaction completed successfully');
+  };
+
+  const handlePayCharges = () => {
+    const amount = user.dueCharges;
+
+    const newTx: Transaction = {
+      id: `tx_${Date.now()}`,
+      date: new Date().toISOString(),
+      merchant: 'TrustBank Fees',
+      amount,
+      type: TransactionType.DEBIT,
+      category: TransactionCategory.FEES,
+      status: 'Completed',
+      location: 'System Charge',
+      note: 'Payment for outstanding re-issuing charges',
+    };
+
+    setTransactions(prev => [newTx, ...prev]);
+
+    setUser(prev => ({
+      ...prev,
+      balance: prev.balance - amount,
+      accountStatus: 'Active',
+      dueCharges: 0,
+    }));
+
+    setViewState({ view: 'DASHBOARD' });
+    showNotification('Charges paid successfully. Account hold lifted.', 'success');
+  };
+
+  const updateTransactionNote = (id: string, note: string) => {
+    setTransactions(prev => prev.map(t => (t.id === id ? { ...t, note } : t)));
+    showNotification('Note updated', 'info');
+  };
+
+  // ROUTING
   if (viewState.view === 'HOME') return <Home onStart={() => setViewState({ view: 'LOGIN' })} />;
   if (viewState.view === 'LOGIN') return <Login onLogin={handleLogin} />;
 
-  return (
-    <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-500">
-      
-      {/* Navigation Layer */}
-      <Sidebar 
-        isOpen={isMobileMenuOpen}
-        onClose={() => setIsMobileMenuOpen(false)}
-        user={user} 
-        onNavigate={(v: any) => setViewState({ view: v })} 
-        onLogout={handleLogout} 
+  if (viewState.view === 'PAYMENT_REQUIRED') {
+    return (
+      <PaymentRequired
+        user={user}
+        onPay={handlePayCharges}
+        onBack={() => setViewState({ view: 'DASHBOARD' })}
       />
+    );
+  }
 
-      {/* Main Content Layer */}
-      <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
-        {/* Mobile Header (Hidden on Desktop) */}
-        <div className="flex items-center justify-between mb-6 lg:hidden">
-          <button 
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="p-3 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800"
+  return (
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-[100] cursor-pointer" onClick={() => setToast(null)}>
+          <div
+            className={`px-6 py-4 rounded-2xl shadow-xl flex items-center gap-3 border text-white ${
+              toast.type === 'success'
+                ? 'bg-green-600 border-green-500'
+                : toast.type === 'info'
+                ? 'bg-brand-600 border-brand-500'
+                : 'bg-red-600 border-red-500'
+            }`}
           >
-            <span className="text-xl">☰</span>
-          </button>
-          <h1 className="text-xl font-black text-brand-600">TrustBank</h1>
-          <div className="w-10 h-10 rounded-full bg-brand-500"></div>
+            <span className="font-bold text-sm">{toast.message}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 z-50 flex items-center justify-between px-4">
+        <div className="font-black text-lg flex items-center gap-2">
+          <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+              <path d="M3 10h12M9 4v12" />
+            </svg>
+          </div>
+          TrustBank
         </div>
 
-        {/* Dynamic Component Loader */}
+        <button
+          className="p-2 rounded-md bg-slate-200 dark:bg-slate-700"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="3" y1="6" x2="19" y2="6" />
+            <line x1="3" y1="12" x2="19" y2="12" />
+            <line x1="3" y1="18" x2="19" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Sidebar */}
+      <Sidebar
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
+        user={user}
+        toggleTheme={toggleTheme}
+        isDarkMode={isDarkMode}
+      />
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 mt-16 lg:mt-0 p-4 lg:p-8">
         {viewState.view === 'DASHBOARD' && (
-          <Dashboard 
-            user={user} 
-            transactions={transactions} 
-            onNavigate={(v: any) => setViewState({ view: v })}
+          <Dashboard
+            user={user}
+            transactions={transactions}
+            isLoading={isLoadingData}
+            onNavigate={handleNavigate}
+            onReceipt={navigateToReceipt}
           />
         )}
 
-        {viewState.view === 'TRANSFERS' && <Transfers />}
+        {viewState.view === 'CARDS' && <Cards user={user} />}
+        {viewState.view === 'STATEMENTS' && <Statements transactions={transactions} />}
+        {viewState.view === 'SETTINGS' && <Settings user={user} onLogout={handleLogout} />}
+        {viewState.view === 'TRANSFERS' && (
+          <Transfers user={user} onTransaction={handleTransaction} />
+        )}
+        {viewState.view === 'SUPPORT' && <Support />}
+        {viewState.view === 'TOOLS' && <Tools />}
+        {viewState.view === 'RECEIPTS' && (
+          <ReceiptsIndex transactions={transactions} onOpen={navigateToReceipt} />
+        )}
 
-        {/* Default / Fallback View */}
-        {!['DASHBOARD', 'HOME', 'LOGIN', 'TRANSFERS'].includes(viewState.view) && (
-          <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
-            <div className="text-6xl mb-6">🚧</div>
-            <h2 className="text-2xl font-bold">Module "{viewState.view}" Encrypted</h2>
-            <p className="text-slate-500 mt-2 max-w-xs mx-auto">This banking feature is currently undergoing scheduled maintenance.</p>
-            <button 
-              onClick={() => setViewState({ view: 'DASHBOARD' })}
-              className="mt-8 px-6 py-3 bg-brand-600 text-white rounded-2xl font-bold shadow-lg shadow-brand-500/20"
-            >
-              Back to Safety
-            </button>
-          </div>
+        {viewState.view === 'RECEIPT' && viewState.transactionId && (
+          <Receipt
+            transaction={transactions.find(t => t.id === viewState.transactionId)!}
+            onUpdateNote={updateTransactionNote}
+            onBack={() => setViewState({ view: 'RECEIPTS' })}
+          />
         )}
       </main>
     </div>
