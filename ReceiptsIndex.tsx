@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { TransactionCategory, Transaction } from '../types';
+import { TransactionCategory, Transaction } from './types';
 import TransactionRow from './TransactionRow';
 
 interface ReceiptsIndexProps {

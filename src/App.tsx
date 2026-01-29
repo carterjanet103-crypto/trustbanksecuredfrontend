@@ -1,13 +1,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTrust } from './TrustContext';
+import { Analytics } from '@vercel/analytics/react';
 
 // Components
-import Sidebar from './components/Sidebar';
-import Dashboard from './components/Dashboard';
-import Login from './components/Login';
-import Transfers from './components/Transfers';
-import Security from './components/Security'; // New Import
-import Home from './components/Home';
+import Sidebar from '../Sidebar';
+import Dashboard from '../Dashboard';
+import Login from '../Login';
+import Transfers from '../Transfers';
+import Security from '../Settings'; // Using Settings as Security
+import Home from '../Home';
 
 const App: React.FC = () => {
   const { user, transactions } = useTrust();
@@ -89,6 +90,7 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+      <Analytics />
     </div>
   );
 };

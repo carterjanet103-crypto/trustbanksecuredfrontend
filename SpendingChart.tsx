@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { SPENDING_DATA } from '../constants';
+import { SPENDING_DATA } from './constants';
 
 const SpendingChart: React.FC = () => {
   const max = Math.max(...SPENDING_DATA.map(d => d.amount));
