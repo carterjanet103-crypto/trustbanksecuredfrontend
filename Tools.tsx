@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Transaction, TransactionType, TransactionCategory, User } from '../types';
+import { Transaction, TransactionType, TransactionCategory, User } from './types';
 
 interface ToolsProps {
   user: User;

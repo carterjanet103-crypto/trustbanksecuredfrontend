@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { User, Transaction, TransactionType, TransactionCategory } from './types';
-import { CURRENT_USER, MOCK_TRANSACTIONS } from './constants';
+import { User, Transaction, TransactionType, TransactionCategory } from '../types';
+import { CURRENT_USER, MOCK_TRANSACTIONS } from '../constants';
 
 interface TrustContextType {
   user: User;

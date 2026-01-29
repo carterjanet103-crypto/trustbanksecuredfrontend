@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { CURRENT_USER } from '../constants';
+import { CURRENT_USER } from './constants';
 
 interface HomeProps {
   onStart: () => void;
@@ -225,10 +225,10 @@ const Home: React.FC<HomeProps> = ({ onStart }) => {
                     <div className="text-xs font-mono text-slate-500">SECURE_CONNECTION_ESTABLISHED</div>
                  </div>
                  <div className="space-y-4 font-mono text-sm text-green-400">
-                    <div>> initiating_handshake...</div>
-                    <div>> verifying_identity_token... <span className="text-brand-400">OK</span></div>
-                    <div>> encrypting_channel (AES-256)... <span className="text-brand-400">OK</span></div>
-                    <div>> access_granted</div>
+                    <div>&gt; initiating_handshake...</div>
+                    <div>&gt; verifying_identity_token... <span className="text-brand-400">OK</span></div>
+                    <div>&gt; encrypting_channel (AES-256)... <span className="text-brand-400">OK</span></div>
+                    <div>&gt; access_granted</div>
                     <div className="h-px bg-slate-700 my-4"></div>
                     <div className="text-white text-center py-8">
                        <div className="w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { MOCK_TRANSACTIONS } from '../constants';
-import { TransactionType } from '../types';
+import { MOCK_TRANSACTIONS } from './constants';
+import { TransactionType } from './types';
 
 interface ReceiptProps {
   transactionId: string;

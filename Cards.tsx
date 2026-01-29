@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { CURRENT_USER, MOCK_TRANSACTIONS } from '../constants';
-import { Transaction, TransactionType, TransactionCategory } from '../types';
+import { CURRENT_USER, MOCK_TRANSACTIONS } from './constants';
+import { Transaction, TransactionType, TransactionCategory } from './types';
 import TransactionRow from './TransactionRow';
 
 interface CardsProps {

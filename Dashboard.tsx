@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { TransactionCategory, Transaction, TransactionType, User } from '../types';
+import { TransactionCategory, Transaction, TransactionType, User } from './types';
 import TransactionRow from './TransactionRow';
 import SpendingChart from './SpendingChart';
 

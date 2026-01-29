@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { CURRENT_USER } from '../constants';
+import { CURRENT_USER } from './constants';
 
 interface SettingsProps {
   onNotify?: (msg: string) => void;

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { User } from '../types';
+import { User } from './types';
 
 interface PaymentRequiredProps {
   user: User;
