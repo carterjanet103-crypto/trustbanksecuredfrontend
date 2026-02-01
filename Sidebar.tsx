@@ -1,43 +1,105 @@
-import React from "react";
 
-interface Props {
-  isOpen: boolean;
-  onClose: () => void;
-  user: any;
-  onNavigate: (view: string) => void;
+
+Add context
+Media
+Mentions
+
+
+
+
+
+Sidebar.tsx
+corrected-files/src/components
+
+
+
+import React from 'react';
+import { useTrust } from '../TrustContext';
+type ViewType = 'LOGIN' | 'DASHBOARD' | 'CARDS' | 'TRANSFERS' | 'SECURITY';
+interface SidebarProps {
+  currentView: ViewType;
+  onNavigate: (view: ViewType) => void;
   onLogout: () => void;
 }
-
-const Sidebar: React.FC<Props> = ({ isOpen, onClose, user, onNavigate, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onLogout }) => {
+  const { user } = useTrust();
+  const menuItems: { id: ViewType; label: string; icon: string }[] = [
+    { id: 'DASHBOARD', label: 'Dashboard', icon: '🏠' },
+    { id: 'CARDS', label: 'Cards', icon: '💳' },
+    { id: 'TRANSFERS', label: 'Transfers', icon: '↔️' },
+    { id: 'SECURITY', label: 'Security', icon: '🔒' },
+  ];
   return (
-    <aside
-      className={`fixed lg:static top-0 left-0 h-full w-64 bg-white dark:bg-slate-900 shadow-lg p-6 transition-transform duration-300 z-50
-      ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
-    >
-      <h2 className="text-2xl font-bold mb-8 text-slate-800 dark:text-white">
-        TrustBank
-      </h2>
-
-      <nav className="space-y-4">
-        <button onClick={() => onNavigate("DASHBOARD")} className="nav-btn">Dashboard</button>
-        <button onClick={() => onNavigate("TRANSFERS")} className="nav-btn">Transfers</button>
-        <button onClick={() => onNavigate("CARDS")} className="nav-btn">Cards</button>
-        <button onClick={() => onNavigate("SETTINGS")} className="nav-btn">Security</button>
-      </nav>
-
-      <div className="absolute bottom-6 left-6">
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
-          Logged in as <strong>{user?.name || "User"}</strong>
+    <aside style={{
+      width: '280px',
+      backgroundColor: '#1e3a8a',
+      color: 'white',
+      height: '100vh',
+      position: 'fixed',
+      left: 0,
+      top: 0,
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      <div style={{ padding: '32px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '4px' }}>TrustBank</h1>
+        <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', letterSpacing: '2px' }}>
+          SECURE ASSET MANAGEMENT
         </p>
+      </div>
+      <div style={{ padding: '24px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <p style={{ fontWeight: '600', marginBottom: '4px' }}>{user.name}</p>
+        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{user.accountNumber}</p>
+      </div>
+      <nav style={{ flex: 1, padding: '16px 12px' }}>
+        {menuItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => onNavigate(item.id)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '14px 16px',
+              backgroundColor: currentView === item.id ? 'rgba(255,255,255,0.15)' : 'transparent',
+              border: 'none',
+              borderRadius: '8px',
+              color: 'white',
+              fontSize: '15px',
+              fontWeight: currentView === item.id ? '600' : '400',
+              cursor: 'pointer',
+              marginBottom: '4px',
+              textAlign: 'left'
+            }}
+          >
+            <span style={{ fontSize: '18px' }}>{item.icon}</span>
+            {item.label}
+          </button>
+        ))}
+      </nav>
+      <div style={{ padding: '24px' }}>
         <button
           onClick={onLogout}
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          style={{
+            width: '100%',
+            padding: '12px',
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: '8px',
+            color: 'white',
+            fontSize: '14px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
         >
-          Logout
+          🚪 Sign Out
         </button>
       </div>
     </aside>
   );
 };
-
 export default Sidebar;
